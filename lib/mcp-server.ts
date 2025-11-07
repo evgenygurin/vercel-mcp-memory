@@ -34,8 +34,7 @@ const tools: Tool[] = [
   },
   {
     name: 'search_memory',
-    description:
-      'Search memories using semantic similarity. Finds relevant memories even if exact keywords don't match.',
+    description: 'Search memories using semantic similarity. Finds relevant memories even if exact keywords do not match.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -55,8 +54,7 @@ const tools: Tool[] = [
         },
         threshold: {
           type: 'number',
-          description:
-            'Minimum similarity threshold 0-1 (default: 0.5). Higher = more strict matching.',
+          description: 'Minimum similarity threshold 0-1 (default: 0.5). Higher = more strict matching.',
           minimum: 0,
           maximum: 1,
         },
