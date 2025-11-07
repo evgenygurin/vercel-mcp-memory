@@ -5,6 +5,7 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  outputFileTracingRoot: require('path').join(__dirname),
 };
 
 module.exports = nextConfig;
