@@ -40,14 +40,18 @@ export async function addMemory(
         updated_at as "updatedAt"
     `;
 
-    const row = result.rows[0];
+    const row = result.rows[0] as any;
 
     return {
-      ...row,
-      embedding: JSON.parse(row.embedding as string),
+      id: row.id,
+      content: row.content,
+      embedding: JSON.parse(row.embedding),
+      metadata: row.metadata,
+      category: row.category,
+      userId: row.userId,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
-    };
+    } as Memory;
   } catch (error) {
     console.error('Error adding memory:', error);
     throw new Error(`Failed to add memory: ${(error as Error).message}`);
@@ -66,24 +70,10 @@ export async function searchMemories(
 
     // Generate embedding for search query
     const queryEmbedding = await generateEmbedding(query);
+    const embeddingStr = `[${queryEmbedding.join(',')}]`;
 
-    // Build WHERE clause conditions
-    const conditions: string[] = [
-      `1 - (embedding <=> '[${queryEmbedding.join(',')}]'::vector) > ${threshold}`,
-    ];
-
-    if (userId) {
-      conditions.push(`user_id = '${userId}'`);
-    }
-
-    if (category) {
-      conditions.push(`category = '${category}'`);
-    }
-
-    const whereClause = conditions.join(' AND ');
-
-    // Execute semantic search query
-    const result = await sql`
+    // Build query dynamically
+    let queryText = `
       SELECT
         id,
         content,
@@ -93,16 +83,38 @@ export async function searchMemories(
         user_id as "userId",
         created_at as "createdAt",
         updated_at as "updatedAt",
-        1 - (embedding <=> ${`[${queryEmbedding.join(',')}]`}::vector) as similarity
+        1 - (embedding <=> $1::vector) as similarity
       FROM memories
-      WHERE ${sql.raw(whereClause)}
-      ORDER BY similarity DESC
-      LIMIT ${limit}
+      WHERE 1 - (embedding <=> $1::vector) > $2
     `;
 
-    return result.rows.map((row) => ({
-      ...row,
-      embedding: JSON.parse(row.embedding as string),
+    const params: any[] = [embeddingStr, threshold];
+    let paramIndex = 3;
+
+    if (userId) {
+      queryText += ` AND user_id = $${paramIndex}`;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    if (category) {
+      queryText += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    queryText += ` ORDER BY similarity DESC LIMIT $${paramIndex}`;
+    params.push(limit);
+
+    const result = await sql.query(queryText, params);
+
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      content: row.content,
+      embedding: JSON.parse(row.embedding),
+      metadata: row.metadata,
+      category: row.category,
+      userId: row.userId,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
       similarity: parseFloat(row.similarity),
@@ -122,20 +134,8 @@ export async function listMemories(
   try {
     const { userId, category, limit = 50, offset = 0 } = options;
 
-    // Build WHERE clause
-    const conditions: string[] = ['1=1'];
-
-    if (userId) {
-      conditions.push(`user_id = '${userId}'`);
-    }
-
-    if (category) {
-      conditions.push(`category = '${category}'`);
-    }
-
-    const whereClause = conditions.join(' AND ');
-
-    const result = await sql`
+    // Build query dynamically
+    let queryText = `
       SELECT
         id,
         content,
@@ -146,15 +146,36 @@ export async function listMemories(
         created_at as "createdAt",
         updated_at as "updatedAt"
       FROM memories
-      WHERE ${sql.raw(whereClause)}
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-      OFFSET ${offset}
+      WHERE 1=1
     `;
 
-    return result.rows.map((row) => ({
-      ...row,
-      embedding: JSON.parse(row.embedding as string),
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (userId) {
+      queryText += ` AND user_id = $${paramIndex}`;
+      params.push(userId);
+      paramIndex++;
+    }
+
+    if (category) {
+      queryText += ` AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const result = await sql.query(queryText, params);
+
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      content: row.content,
+      embedding: JSON.parse(row.embedding),
+      metadata: row.metadata,
+      category: row.category,
+      userId: row.userId,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }));
