@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/codeql.yml/badge.svg)](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/codeql.yml)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-Enabled-7C3AED?logo=anthropic)](https://docs.claude.com/en/docs/claude-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/evgenygurin/vercel-mcp-memory)](https://github.com/evgenygurin/vercel-mcp-memory/issues)
 [![GitHub stars](https://img.shields.io/github/stars/evgenygurin/vercel-mcp-memory)](https://github.com/evgenygurin/vercel-mcp-memory/stargazers)
@@ -19,6 +20,7 @@ Custom Model Context Protocol (MCP) memory server deployed on Vercel with semant
 - ✅ **Input Validation** - Zod schemas for robust data validation
 - 📝 **Structured Logging** - Production-ready error tracking
 - 🌍 **Multi-language** - Supports Russian, English and more
+- 🤖 **Claude Code Integration** - Automated PR reviews and AI assistant via GitHub Actions
 
 ## 🏗️ Architecture
 
@@ -374,6 +376,30 @@ See [SECURITY.md](./SECURITY.md) for security best practices.
 - [MCP Specification](https://modelcontextprotocol.io)
 - [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings)
 - [pgvector](https://github.com/pgvector/pgvector)
+
+## 🤖 Claude Code Integration
+
+This repository uses Claude Code via GitHub Actions for automated code reviews and AI assistance.
+
+### Automated PR Reviews
+
+Every pull request automatically receives a comprehensive code review from Claude, focusing on:
+- Code quality and best practices
+- Potential bugs and security issues
+- Performance considerations
+- Test coverage
+
+### Interactive AI Assistant
+
+Mention `@claude` in any issue or PR comment to get help:
+
+```bash
+@claude Please review the security implications of these auth changes.
+@claude Help me fix the TypeScript errors in lib/db.ts.
+@claude Update CLAUDE.md to reflect the new architecture.
+```
+
+For detailed setup and troubleshooting, see [.github/CLAUDE_CODE_SETUP.md](.github/CLAUDE_CODE_SETUP.md).
 
 ## 📝 License
 
