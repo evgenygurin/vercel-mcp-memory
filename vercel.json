@@ -2,11 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app/api/mcp/sse/route.ts": {
-      "memory": 512,
       "maxDuration": 60
     },
-    "app/api/mcp/health/route.ts": {
-      "memory": 128,
+    "app/api/health/route.ts": {
       "maxDuration": 10
     }
   },
