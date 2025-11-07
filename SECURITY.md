@@ -62,4 +62,4 @@ Rotate your OpenAI API key regularly:
 
 ## Known Issues
 
-See [GitHub Issues](https://github.com/yourusername/vercel-mcp-memory/issues) for known security issues.
+See [GitHub Issues](https://github.com/evgenygurin/vercel-mcp-memory/issues) for known security issues.

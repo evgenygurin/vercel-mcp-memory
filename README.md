@@ -1,5 +1,11 @@
 # Vercel MCP Memory
 
+[![CI](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/codeql.yml/badge.svg)](https://github.com/evgenygurin/vercel-mcp-memory/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub issues](https://img.shields.io/github/issues/evgenygurin/vercel-mcp-memory)](https://github.com/evgenygurin/vercel-mcp-memory/issues)
+[![GitHub stars](https://img.shields.io/github/stars/evgenygurin/vercel-mcp-memory)](https://github.com/evgenygurin/vercel-mcp-memory/stargazers)
+
 Custom Model Context Protocol (MCP) memory server deployed on Vercel with semantic search powered by OpenAI embeddings and PostgreSQL pgvector.
 
 ## ✨ Features
@@ -375,13 +381,17 @@ MIT
 
 ## 🤝 Contributing
 
-Contributions welcome! Please:
+Contributions are welcome! Please read our [Contributing Guidelines](.github/CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) first.
+
+Quick steps:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
+
+For questions or support, see [SUPPORT.md](SUPPORT.md).
 
 ## 🙏 Acknowledgments
 

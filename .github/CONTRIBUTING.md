@@ -31,7 +31,7 @@ Be respectful and constructive in all interactions.
 1. **Fork and Clone**
 
    ```bash
-   git clone https://github.com/yourusername/vercel-mcp-memory.git
+   git clone https://github.com/evgenygurin/vercel-mcp-memory.git
    cd vercel-mcp-memory
    npm install
    ```

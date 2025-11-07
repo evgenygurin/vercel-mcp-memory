@@ -33,7 +33,7 @@ export default function Home() {
 
       <h2>📖 Documentation</h2>
       <p>
-        See <a href="https://github.com/yourusername/vercel-mcp-memory">README.md</a> for setup
+        See <a href="https://github.com/evgenygurin/vercel-mcp-memory">README.md</a> for setup
         instructions and API documentation.
       </p>
 
