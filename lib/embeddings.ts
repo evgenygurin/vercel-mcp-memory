@@ -1,22 +1,32 @@
-import { embed, embedMany } from 'ai';
-
 /**
- * Generate a single embedding vector for text using Vercel AI SDK
+ * Generate a single embedding vector for text using OpenAI API
  * Uses OpenAI's text-embedding-3-small model (1536 dimensions)
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const normalized = normalizeText(text);
 
-    const result = await embed({
-      model: 'openai/text-embedding-3-small',
-      value: normalized,
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: normalized,
+      }),
     });
 
-    return result.embedding;
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
   } catch (error) {
     console.error('Error generating embedding:', error);
-    throw new Error(`Failed to generate embedding: ${error.message}`);
+    throw new Error(`Failed to generate embedding: ${(error as Error).message}`);
   }
 }
 
@@ -28,15 +38,27 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   try {
     const normalized = texts.map(normalizeText);
 
-    const result = await embedMany({
-      model: 'openai/text-embedding-3-small',
-      values: normalized,
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: normalized,
+      }),
     });
 
-    return result.embeddings;
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data.map((item: any) => item.embedding);
   } catch (error) {
     console.error('Error generating embeddings:', error);
-    throw new Error(`Failed to generate embeddings: ${error.message}`);
+    throw new Error(`Failed to generate embeddings: ${(error as Error).message}`);
   }
 }
 
