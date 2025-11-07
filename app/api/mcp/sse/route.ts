@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createMCPServer } from '@/lib/mcp-server';
+import { addMemory, searchMemories, listMemories, deleteMemory, getMemoryStats } from '@/lib/db';
 
 export const runtime = 'edge';
 export const maxDuration = 300;
@@ -186,20 +187,182 @@ export async function POST(request: NextRequest) {
       case 'tools/call':
       case 'call_tool':
         // Handle tool execution
-        // In production, this should use server.handleRequest()
-        // For now, return a placeholder
-        return Response.json({
-          jsonrpc: '2.0',
-          result: {
-            content: [
-              {
-                type: 'text',
-                text: 'Tool execution endpoint - implement full MCP SDK integration',
-              },
-            ],
-          },
-          id,
-        });
+        try {
+          const { name, arguments: args = {} } = params;
+
+          switch (name) {
+            case 'add_memory': {
+              const result = await addMemory(args.content as string, {
+                category: args.category as string | undefined,
+                metadata: args.metadata as Record<string, any> | undefined,
+              });
+
+              return Response.json({
+                jsonrpc: '2.0',
+                result: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `✓ Memory added successfully!\n\nID: ${result.id}\nCategory: ${result.category || 'none'}\nCreated: ${result.createdAt.toISOString()}`,
+                    },
+                  ],
+                },
+                id,
+              });
+            }
+
+            case 'search_memory': {
+              const results = await searchMemories(args.query as string, {
+                category: args.category as string | undefined,
+                limit: args.limit as number | undefined,
+                threshold: args.threshold as number | undefined,
+              });
+
+              if (results.length === 0) {
+                return Response.json({
+                  jsonrpc: '2.0',
+                  result: {
+                    content: [
+                      {
+                        type: 'text',
+                        text: `No memories found matching "${args.query}"`,
+                      },
+                    ],
+                  },
+                  id,
+                });
+              }
+
+              const formatted = results
+                .map(
+                  (m, i) =>
+                    `${i + 1}. [${(m.similarity * 100).toFixed(1)}% match] ${m.content}\n   Category: ${m.category || 'none'} | Created: ${m.createdAt.toLocaleDateString()}`
+                )
+                .join('\n\n');
+
+              return Response.json({
+                jsonrpc: '2.0',
+                result: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Found ${results.length} matching memories:\n\n${formatted}`,
+                    },
+                  ],
+                },
+                id,
+              });
+            }
+
+            case 'list_memories': {
+              const results = await listMemories({
+                category: args.category as string | undefined,
+                limit: args.limit as number | undefined,
+                offset: args.offset as number | undefined,
+              });
+
+              if (results.length === 0) {
+                return Response.json({
+                  jsonrpc: '2.0',
+                  result: {
+                    content: [
+                      {
+                        type: 'text',
+                        text: 'No memories found.',
+                      },
+                    ],
+                  },
+                  id,
+                });
+              }
+
+              const formatted = results
+                .map(
+                  (m, i) =>
+                    `${i + 1}. ${m.content}\n   Category: ${m.category || 'none'} | Created: ${m.createdAt.toLocaleDateString()}`
+                )
+                .join('\n\n');
+
+              return Response.json({
+                jsonrpc: '2.0',
+                result: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `${results.length} memories:\n\n${formatted}`,
+                    },
+                  ],
+                },
+                id,
+              });
+            }
+
+            case 'delete_memory': {
+              const success = await deleteMemory(args.id as string);
+
+              return Response.json({
+                jsonrpc: '2.0',
+                result: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: success
+                        ? `✓ Memory ${args.id} deleted successfully`
+                        : `✗ Memory ${args.id} not found`,
+                    },
+                  ],
+                },
+                id,
+              });
+            }
+
+            case 'memory_stats': {
+              const stats = await getMemoryStats();
+
+              return Response.json({
+                jsonrpc: '2.0',
+                result: {
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Memory Statistics:\n\n` +
+                        `• Total memories: ${stats.totalMemories}\n` +
+                        `• Categories: ${stats.totalCategories}\n` +
+                        `• Users: ${stats.totalUsers}\n` +
+                        `• Oldest: ${stats.oldestMemory?.toLocaleDateString() || 'N/A'}\n` +
+                        `• Newest: ${stats.newestMemory?.toLocaleDateString() || 'N/A'}`,
+                    },
+                  ],
+                },
+                id,
+              });
+            }
+
+            default:
+              return Response.json({
+                jsonrpc: '2.0',
+                error: {
+                  code: -32601,
+                  message: `Unknown tool: ${name}`,
+                },
+                id,
+              });
+          }
+        } catch (toolError) {
+          return Response.json({
+            jsonrpc: '2.0',
+            result: {
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: ${(toolError as Error).message}`,
+                },
+              ],
+              isError: true,
+            },
+            id,
+          });
+        }
 
       default:
         return Response.json(
