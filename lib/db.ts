@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { generateEmbedding } from './embeddings';
+import { logger } from './logger';
 import type {
   Memory,
   MemorySearchResult,
@@ -53,7 +54,7 @@ export async function addMemory(
       updatedAt: new Date(row.updatedAt),
     } as Memory;
   } catch (error) {
-    console.error('Error adding memory:', error);
+    logger.error('Failed to add memory', error as Error, { contentLength: content.length });
     throw new Error(`Failed to add memory: ${(error as Error).message}`);
   }
 }
@@ -120,7 +121,7 @@ export async function searchMemories(
       similarity: parseFloat(row.similarity),
     }));
   } catch (error) {
-    console.error('Error searching memories:', error);
+    logger.error('Failed to search memories', error as Error, { query });
     throw new Error(`Failed to search memories: ${(error as Error).message}`);
   }
 }
@@ -180,7 +181,7 @@ export async function listMemories(
       updatedAt: new Date(row.updatedAt),
     }));
   } catch (error) {
-    console.error('Error listing memories:', error);
+    logger.error('Failed to list memories', error as Error);
     throw new Error(`Failed to list memories: ${(error as Error).message}`);
   }
 }
@@ -196,7 +197,7 @@ export async function deleteMemory(id: string): Promise<boolean> {
 
     return (result.rowCount ?? 0) > 0;
   } catch (error) {
-    console.error('Error deleting memory:', error);
+    logger.error('Failed to delete memory', error as Error, { id });
     throw new Error(`Failed to delete memory: ${(error as Error).message}`);
   }
 }
@@ -226,7 +227,7 @@ export async function getMemoryStats(): Promise<{
       newestMemory: stats.newest_memory ? new Date(stats.newest_memory) : null,
     };
   } catch (error) {
-    console.error('Error getting memory stats:', error);
+    logger.error('Failed to get memory stats', error as Error);
     throw new Error(`Failed to get memory stats: ${(error as Error).message}`);
   }
 }

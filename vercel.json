@@ -1,11 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "app/api/mcp/sse/route.ts": {
+    "app/api/**/*.ts": {
       "maxDuration": 60
-    },
-    "app/api/health/route.ts": {
-      "maxDuration": 10
     }
   },
   "rewrites": [

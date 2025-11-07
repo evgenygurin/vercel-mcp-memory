@@ -1,29 +1,33 @@
 # Vercel MCP Memory
 
-Custom Model Context Protocol (MCP) memory server deployed on Vercel with semantic search powered by Vercel AI SDK and PostgreSQL pgvector.
+Custom Model Context Protocol (MCP) memory server deployed on Vercel with semantic search powered by OpenAI embeddings and PostgreSQL pgvector.
 
 ## ✨ Features
 
 - 🧠 **Semantic Search** - Find memories by meaning, not just keywords
+- 🔐 **Secure API** - Optional API key authentication for production
 - ☁️ **Cloud-Hosted** - Deployed on Vercel Edge Functions (zero-infrastructure)
 - 🔄 **Cross-Device Sync** - Access your memory from any device with Claude
-- 🚀 **Vercel AI SDK** - Embeddings via OpenAI's text-embedding-3-small
+- 🚀 **OpenAI Embeddings** - Using text-embedding-3-small model
 - 🗄️ **PostgreSQL + pgvector** - Efficient vector similarity search
-- 🇷🇺 **Multi-language** - Supports Russian and English
+- ✅ **Input Validation** - Zod schemas for robust data validation
+- 📝 **Structured Logging** - Production-ready error tracking
+- 🌍 **Multi-language** - Supports Russian, English and more
 
 ## 🏗️ Architecture
 
 ```text
 Claude Desktop → HTTPS/JSON-RPC → Vercel Edge Function → Postgres (pgvector)
                                          ↓
-                                   Vercel AI SDK (Embeddings)
+                                   OpenAI Embeddings API
 ```
 
 ## 📋 Prerequisites
 
-- Node.js 18+
+- Node.js 20.x
 - Vercel account (free tier works)
 - OpenAI API key (for embeddings, ~$0.10/1M tokens)
+- PostgreSQL database with pgvector extension (Vercel Postgres or Neon)
 
 ## 🚀 Quick Start
 
@@ -55,12 +59,25 @@ vercel link
 
 ### 3. Configure Environment Variables
 
-```bash
-# Pull environment variables from Vercel
-vercel env pull .env.local
+Create `.env.local` file:
 
-# Add OpenAI API key (optional, for embeddings)
-echo "OPENAI_API_KEY=sk-..." >> .env.local
+```bash
+# Required: OpenAI API key for embeddings
+OPENAI_API_KEY=sk-...
+
+# Required: PostgreSQL connection (auto-configured by Vercel)
+POSTGRES_URL=postgresql://...
+
+# Optional: API keys for authentication (comma-separated)
+# Leave empty for development without auth
+MCP_API_KEYS=your-secret-key-1,your-secret-key-2
+```
+
+Generate secure API keys:
+
+```bash
+# Generate a secure API key
+openssl rand -base64 32
 ```
 
 ### 4. Run Database Migration
@@ -87,7 +104,29 @@ Your MCP server will be available at: `https://your-project.vercel.app`
 
 ### 6. Configure Claude Desktop
 
-Edit `~/.config/claude-desktop/claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `~/.config/claude-desktop/claude_desktop_config.json` (Linux):
+
+**With authentication (recommended for production):**
+
+```json
+{
+  "mcpServers": {
+    "vercel-memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://your-project.vercel.app/api/mcp/sse"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-secret-key-here"
+      }
+    }
+  }
+}
+```
+
+**Without authentication (development only):**
 
 ```json
 {
@@ -126,6 +165,19 @@ Should return:
 }
 ```
 
+### Test MCP Endpoint with Authentication
+
+```bash
+curl -X POST https://your-project.vercel.app/api/mcp/sse \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-secret-key" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 1
+  }'
+```
+
 ### Test in Claude
 
 ```bash
@@ -144,9 +196,9 @@ Store new memory with semantic embeddings.
 
 ```typescript
 {
-  content: string,      // Required
-  category?: string,    // e.g., "projects", "people", "preferences"
-  metadata?: object     // Custom key-value pairs
+  content: string,      // Required (1-10000 chars)
+  category?: string,    // Optional (max 100 chars)
+  metadata?: object     // Optional custom key-value pairs
 }
 ```
 
@@ -156,9 +208,9 @@ Semantic search across memories.
 
 ```typescript
 {
-  query: string,        // Required: natural language query
+  query: string,        // Required: natural language query (1-1000 chars)
   category?: string,    // Filter by category
-  limit?: number,       // Max results (default: 10)
+  limit?: number,       // Max results (default: 10, max: 50)
   threshold?: number    // Min similarity 0-1 (default: 0.5)
 }
 ```
@@ -170,7 +222,7 @@ List all memories chronologically.
 ```typescript
 {
   category?: string,    // Filter by category
-  limit?: number,       // Max results (default: 50)
+  limit?: number,       // Max results (default: 50, max: 100)
   offset?: number       // Pagination offset (default: 0)
 }
 ```
@@ -181,7 +233,7 @@ Delete specific memory by UUID.
 
 ```typescript
 {
-  id: string           // UUID of memory
+  id: string           // UUID of memory (validated)
 }
 ```
 
@@ -198,20 +250,33 @@ Get statistics about stored memories.
 ```text
 vercel-mcp-memory/
 ├── app/
-│   └── api/
-│       ├── health/route.ts          # Health check endpoint
-│       └── mcp/sse/route.ts         # MCP JSON-RPC endpoint
+│   ├── api/
+│   │   ├── health/route.ts          # Health check endpoint
+│   │   └── mcp/sse/route.ts         # MCP JSON-RPC endpoint
+│   ├── layout.tsx                   # Next.js layout
+│   └── page.tsx                     # Landing page
 ├── lib/
+│   ├── auth.ts                      # API authentication
 │   ├── db.ts                        # Postgres + pgvector queries
-│   ├── embeddings.ts                # Vercel AI SDK embeddings
-│   ├── mcp-server.ts                # MCP protocol handlers
-│   └── types.ts                     # TypeScript definitions
+│   ├── embeddings.ts                # OpenAI embeddings client
+│   ├── logger.ts                    # Structured logging
+│   ├── mcp-handlers.ts              # Centralized tool handlers
+│   ├── mcp-server.ts                # MCP SDK integration
+│   ├── types.ts                     # TypeScript definitions
+│   └── validation.ts                # Zod input validation
 ├── migrations/
 │   └── 001_init.sql                 # Database schema
 ├── scripts/
-│   └── migrate-old-data.ts          # Data migration script
-├── vercel.json                      # Vercel configuration
-└── package.json
+│   ├── insert-test-data.ts          # Test data seeding
+│   └── migrate-old-data.ts          # Legacy data migration
+├── .env.example                     # Environment variables template
+├── .eslintrc.json                   # ESLint configuration
+├── .gitignore                       # Git ignore rules
+├── SECURITY.md                      # Security guidelines
+├── next.config.js                   # Next.js configuration
+├── package.json                     # Dependencies
+├── tsconfig.json                    # TypeScript configuration
+└── vercel.json                      # Vercel deployment config
 ```
 
 ## 🔧 Development
@@ -220,21 +285,38 @@ vercel-mcp-memory/
 # Run locally
 npm run dev
 
-# Build
+# Build for production
 npm run build
+
+# Lint code
+npm run lint
 
 # Migrate old data
 npm run migrate
 ```
 
+## 🔐 Security
+
+See [SECURITY.md](./SECURITY.md) for security best practices.
+
+**Important:**
+
+- Never commit `.env.local` or `.env.production` files
+- Rotate API keys regularly
+- Enable `MCP_API_KEYS` authentication in production
+- Monitor API usage to prevent quota exhaustion
+- Review [SECURITY.md](./SECURITY.md) before deploying
+
 ## 💰 Cost Estimation
 
 **Vercel Free Tier (sufficient for personal use):**
+
 - ✅ Functions: 100 GB-hours/month
 - ✅ Postgres: 256 MB storage
 - ✅ Bandwidth: 100 GB
 
 **After free tier:**
+
 - Postgres: ~$0.20/GB/month
 - OpenAI Embeddings: ~$0.10/1M tokens (~$0.02/month for typical usage)
 - Functions: ~$40/100 GB-hours
@@ -246,18 +328,28 @@ npm run migrate
 ### Claude can't connect
 
 1. Check health endpoint: `curl https://your-project.vercel.app/api/health`
-2. Verify Vercel deployment: `vercel ls`
-3. Check Claude config path is correct
-4. Restart Claude Desktop
+2. Verify API key matches in both Vercel env and Claude config
+3. Check Vercel deployment: `vercel ls`
+4. Verify Claude config path is correct
+5. Restart Claude Desktop
+
+### Authentication errors
+
+1. Verify `MCP_API_KEYS` is set in Vercel environment variables
+2. Check API key format (no extra spaces or newlines)
+3. Ensure Claude config includes `MCP_API_KEY` in env section
+4. Try without authentication first (remove `MCP_API_KEYS` from Vercel env)
 
 ### Database errors
 
 1. Verify pgvector extension is enabled:
+
    ```sql
    SELECT * FROM pg_extension WHERE extname = 'vector';
    ```
 
 2. Check table exists:
+
    ```sql
    \dt memories
    ```
@@ -268,13 +360,13 @@ npm run migrate
 
 1. Verify OpenAI API key is set: `vercel env ls`
 2. Check API key has sufficient credits
-3. Monitor usage: https://platform.openai.com/usage
+3. Monitor usage: <https://platform.openai.com/usage>
 
 ## 📖 Resources
 
 - [Vercel Documentation](https://vercel.com/docs)
 - [MCP Specification](https://modelcontextprotocol.io)
-- [Vercel AI SDK](https://sdk.vercel.ai)
+- [OpenAI Embeddings](https://platform.openai.com/docs/guides/embeddings)
 - [pgvector](https://github.com/pgvector/pgvector)
 
 ## 📝 License
@@ -283,8 +375,24 @@ MIT
 
 ## 🤝 Contributing
 
-Contributions welcome! Please open an issue or PR.
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 🙏 Acknowledgments
+
+Built with:
+
+- [Vercel](https://vercel.com) - Hosting and Postgres
+- [Next.js](https://nextjs.org) - React framework
+- [OpenAI](https://openai.com) - Embeddings API
+- [MCP SDK](https://github.com/modelcontextprotocol/sdk) - Protocol implementation
+- [pgvector](https://github.com/pgvector/pgvector) - Vector similarity search
 
 ---
 
-Built with ❤️ using Vercel, Next.js, and Claude Code
+Made with ❤️ using Vercel, Next.js, and Claude Code

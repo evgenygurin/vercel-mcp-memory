@@ -1,16 +1,23 @@
+import { logger } from './logger';
+
 /**
  * Generate a single embedding vector for text using OpenAI API
  * Uses OpenAI's text-embedding-3-small model (1536 dimensions)
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+
     const normalized = normalizeText(text);
 
     const response = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'text-embedding-3-small',
@@ -19,13 +26,16 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
     return data.data[0].embedding;
   } catch (error) {
-    console.error('Error generating embedding:', error);
+    logger.error('Failed to generate embedding', error as Error, {
+      textLength: text.length,
+    });
     throw new Error(`Failed to generate embedding: ${(error as Error).message}`);
   }
 }
@@ -36,13 +46,18 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+
     const normalized = texts.map(normalizeText);
 
     const response = await fetch('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: 'text-embedding-3-small',
@@ -51,13 +66,16 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
     return data.data.map((item: any) => item.embedding);
   } catch (error) {
-    console.error('Error generating embeddings:', error);
+    logger.error('Failed to generate embeddings', error as Error, {
+      batchSize: texts.length,
+    });
     throw new Error(`Failed to generate embeddings: ${(error as Error).message}`);
   }
 }
